@@ -1,20 +1,23 @@
 package ar.edu.unlam.crmferretero.producto;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import ar.edu.unlam.crmferretero.shared.AlcanceUtils;
 import ar.edu.unlam.crmferretero.shared.ConsultaUtils;
 import ar.edu.unlam.crmferretero.shared.OpcionResponse;
 import ar.edu.unlam.crmferretero.shared.PageResponse;
+import ar.edu.unlam.crmferretero.shared.TenantContext;
+import ar.edu.unlam.crmferretero.shared.exception.DuplicateResourceException;
 import ar.edu.unlam.crmferretero.shared.exception.NotFoundException;
 
-/** Catálogo de productos: solo lectura en esta entrega, se carga por el seed. */
+/** Catálogo de productos, propio de cada distribuidora, con ABM completo para ADMIN_COMERCIO. */
 @Service
 public class ProductoService {
 
@@ -28,10 +31,11 @@ public class ProductoService {
         this.mongoTemplate = mongoTemplate;
     }
 
-    public PageResponse<ProductoResponse> listar(String texto, RubroProducto rubro, Integer pagina, Integer tamanio) {
+    public PageResponse<ProductoResponse> listar(String texto, RubroProducto rubro, String distribuidoraId,
+                                                  Integer pagina, Integer tamanio) {
         Pageable pageable = ConsultaUtils.paginar(pagina, tamanio);
-        Criteria criteria = new Criteria();
-        List<Criteria> condiciones = new java.util.ArrayList<>();
+        List<Criteria> condiciones = new ArrayList<>();
+        AlcanceUtils.porDistribuidora(condiciones, distribuidoraId);
 
         String textoNormalizado = ConsultaUtils.normalizar(texto);
         if (textoNormalizado != null) {
@@ -44,9 +48,7 @@ public class ProductoService {
         if (rubro != null) {
             condiciones.add(Criteria.where("rubro").is(rubro));
         }
-        if (!condiciones.isEmpty()) {
-            criteria.andOperator(condiciones.toArray(new Criteria[0]));
-        }
+        Criteria criteria = condiciones.isEmpty() ? new Criteria() : new Criteria().andOperator(condiciones.toArray(new Criteria[0]));
 
         long total = mongoTemplate.count(new Query(criteria), Producto.class);
         Query query = new Query(criteria).with(pageable);
@@ -57,14 +59,68 @@ public class ProductoService {
     }
 
     public List<OpcionResponse> opciones() {
-        return productoRepository.findAll().stream()
+        List<Criteria> condiciones = new ArrayList<>();
+        AlcanceUtils.porDistribuidora(condiciones, null);
+        Criteria criteria = condiciones.isEmpty() ? new Criteria() : new Criteria().andOperator(condiciones.toArray(new Criteria[0]));
+
+        return mongoTemplate.find(new Query(criteria), Producto.class).stream()
                 .filter(Producto::isActivo)
                 .map(producto -> new OpcionResponse(producto.getId(), producto.nombreVisible()))
                 .toList();
     }
 
     public Producto obtenerPorId(String id) {
-        return productoRepository.findById(id)
+        Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Producto no encontrado (id " + id + ")"));
+        if (!TenantContext.esAdmin() && !java.util.Objects.equals(producto.getDistribuidoraId(), TenantContext.distribuidoraId())) {
+            throw new NotFoundException("Producto no encontrado (id " + id + ")");
+        }
+        return producto;
+    }
+
+    public ProductoResponse crear(ProductoRequest request) {
+        validarCodigoUnico(request.codigo(), null);
+        Producto producto = new Producto();
+        aplicarRequest(producto, request);
+        producto.setDistribuidoraId(AlcanceUtils.distribuidoraIdParaAlta());
+        return productoMapper.toResponse(productoRepository.save(producto));
+    }
+
+    public ProductoResponse actualizar(String id, ProductoRequest request) {
+        Producto producto = obtenerPorId(id);
+        validarCodigoUnico(request.codigo(), id);
+        aplicarRequest(producto, request);
+        return productoMapper.toResponse(productoRepository.save(producto));
+    }
+
+    public ProductoResponse cambiarEstado(String id, boolean activo) {
+        Producto producto = obtenerPorId(id);
+        producto.setActivo(activo);
+        return productoMapper.toResponse(productoRepository.save(producto));
+    }
+
+    private void aplicarRequest(Producto producto, ProductoRequest request) {
+        producto.setCodigo(ConsultaUtils.normalizar(request.codigo()));
+        producto.setNombre(ConsultaUtils.normalizar(request.nombre()));
+        producto.setMarca(ConsultaUtils.normalizar(request.marca()));
+        producto.setRubro(request.rubro());
+        producto.setUnidadVenta(request.unidadVenta());
+        producto.setPresentacion(ConsultaUtils.normalizar(request.presentacion()));
+        producto.setPrecioListaReferencia(request.precioListaReferencia());
+        producto.setPreciosPorLista(request.preciosPorLista());
+        producto.setEscalonesDescuento(request.escalonesDescuento() == null ? null
+                : request.escalonesDescuento().stream()
+                        .map(e -> new EscalonDescuento(e.cantidadMinima(), e.descuentoPorcentaje()))
+                        .toList());
+    }
+
+    private void validarCodigoUnico(String codigo, String idPropio) {
+        String codigoNormalizado = ConsultaUtils.normalizar(codigo);
+        productoRepository.findByCodigoAndDistribuidoraId(codigoNormalizado, AlcanceUtils.distribuidoraIdParaAlta())
+                .ifPresent(existente -> {
+                    if (idPropio == null || !existente.getId().equals(idPropio)) {
+                        throw new DuplicateResourceException("Ya existe un producto con el código " + codigoNormalizado);
+                    }
+                });
     }
 }

@@ -8,6 +8,7 @@ import Cargando from '../../components/Cargando'
 import MensajeError from '../../components/MensajeError'
 import Vacio from '../../components/Vacio'
 import Etiqueta, { tonoDeEstadoRegistro, tonoDeEstadoOportunidad } from '../../components/Etiqueta'
+import HistorialComercial from '../../components/HistorialComercial'
 import { formatMoneda } from '../../utils/formato'
 
 export default function ComercioDetalle() {
@@ -142,6 +143,10 @@ export default function ComercioDetalle() {
           </div>
         )}
       </section>
+
+      <div className="mt-6">
+        <HistorialComercial empresaId={id} />
+      </div>
     </div>
   )
 }

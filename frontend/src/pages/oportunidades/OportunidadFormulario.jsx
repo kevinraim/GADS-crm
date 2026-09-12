@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { crearOportunidad, actualizarOportunidad, obtenerOportunidad } from '../../api/oportunidades'
-import { opcionesEmpresas } from '../../api/empresas'
+import { opcionesEmpresas, obtenerEmpresa } from '../../api/empresas'
 import { listarContactos } from '../../api/contactos'
 import { listarProductos } from '../../api/productos'
 import { listarUsuarios } from '../../api/usuarios'
@@ -11,6 +11,7 @@ import Campo, { claseInput } from '../../components/Campo'
 import MensajeError from '../../components/MensajeError'
 import Cargando from '../../components/Cargando'
 import { formatMoneda } from '../../utils/formato'
+import { calcularPrecioSugerido } from '../../utils/precios'
 
 const DATOS_VACIOS = {
   titulo: '',
@@ -35,6 +36,7 @@ export default function OportunidadFormulario() {
   const [form, setForm] = useState({ ...DATOS_VACIOS, empresaId: parametros.get('empresaId') || '' })
   const [items, setItems] = useState([])
   const [empresas, setEmpresas] = useState([])
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null)
   const [contactos, setContactos] = useState([])
   const [productos, setProductos] = useState([])
   const [usuarios, setUsuarios] = useState([])
@@ -55,6 +57,16 @@ export default function OportunidadFormulario() {
     listarContactos({ empresaId: form.empresaId || undefined, tamanio: 100 })
       .then((r) => setContactos(r.contenido))
       .catch(() => {})
+  }, [form.empresaId])
+
+  // Se necesita la lista de precios del comercio (no viaja en las "opciones" del combo) para poder
+  // sugerir el precio unitario de cada ítem.
+  useEffect(() => {
+    if (!form.empresaId) {
+      setEmpresaSeleccionada(null)
+      return
+    }
+    obtenerEmpresa(form.empresaId).then(setEmpresaSeleccionada).catch(() => setEmpresaSeleccionada(null))
   }, [form.empresaId])
 
   useEffect(() => {
@@ -98,10 +110,23 @@ export default function OportunidadFormulario() {
     setItems((i) =>
       i.map((item, idx) => {
         if (idx !== indice) return item
+
         if (campo === 'productoId') {
           const producto = productos.find((p) => p.id === valor)
-          return { ...item, productoId: valor, precioUnitario: producto ? producto.precioListaReferencia : item.precioUnitario }
+          const precioSugerido = producto
+            ? calcularPrecioSugerido(producto, empresaSeleccionada?.listaPrecios, item.cantidad)
+            : item.precioUnitario
+          return { ...item, productoId: valor, precioUnitario: precioSugerido }
         }
+
+        if (campo === 'cantidad') {
+          const producto = productos.find((p) => p.id === item.productoId)
+          const precioSugerido = producto
+            ? calcularPrecioSugerido(producto, empresaSeleccionada?.listaPrecios, valor)
+            : item.precioUnitario
+          return { ...item, cantidad: valor, precioUnitario: precioSugerido }
+        }
+
         return { ...item, [campo]: valor }
       })
     )
@@ -227,6 +252,14 @@ export default function OportunidadFormulario() {
           {items.length === 0 && (
             <p className="rounded border border-dashed border-linea px-4 py-4 text-sm text-texto/50">
               Sin ítems cargados. Si no agregás ninguno, se usa el valor estimado ingresado a mano.
+            </p>
+          )}
+
+          {items.length > 0 && (
+            <p className="mb-2 text-xs text-texto/50">
+              El precio unitario se sugiere solo según la lista de precios del comercio
+              {empresaSeleccionada?.listaPrecios ? ` (${empresaSeleccionada.listaPrecios})` : ' (sin lista asignada: usa el precio de referencia)'}
+              {' '}y la cantidad (por si aplica un descuento por volumen) — siempre lo podés editar a mano.
             </p>
           )}
 

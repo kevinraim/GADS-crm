@@ -18,6 +18,9 @@ public class Usuario extends BaseDocument {
     private Rol rol;
     private boolean activo = true;
 
+    /** null para ADMIN (superadmin, no pertenece a ninguna distribuidora). */
+    private String distribuidoraId;
+
     public Usuario() {
     }
 
@@ -28,6 +31,12 @@ public class Usuario extends BaseDocument {
         this.passwordHash = passwordHash;
         this.rol = rol;
         this.activo = activo;
+    }
+
+    public Usuario(String nombre, String apellido, String email, String passwordHash, Rol rol, boolean activo,
+                    String distribuidoraId) {
+        this(nombre, apellido, email, passwordHash, rol, activo);
+        this.distribuidoraId = distribuidoraId;
     }
 
     public String getNombreCompleto() {
@@ -80,5 +89,13 @@ public class Usuario extends BaseDocument {
 
     public void setActivo(boolean activo) {
         this.activo = activo;
+    }
+
+    public String getDistribuidoraId() {
+        return distribuidoraId;
+    }
+
+    public void setDistribuidoraId(String distribuidoraId) {
+        this.distribuidoraId = distribuidoraId;
     }
 }

@@ -5,5 +5,18 @@ package ar.edu.unlam.crmferretero.catalogo;
  * (fijo, es un enum del código: EstadoOportunidad).
  */
 public enum TipoEtapa {
-    ABIERTA, GANADA, PERDIDA
+
+    ABIERTA("Abierta"),
+    GANADA("Ganada"),
+    PERDIDA("Perdida");
+
+    private final String etiqueta;
+
+    TipoEtapa(String etiqueta) {
+        this.etiqueta = etiqueta;
+    }
+
+    public String getEtiqueta() {
+        return etiqueta;
+    }
 }

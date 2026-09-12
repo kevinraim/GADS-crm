@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/AuthContext'
 import Cargando from '../../components/Cargando'
 import MensajeError from '../../components/MensajeError'
 import Etiqueta, { tonoDeEstadoOportunidad } from '../../components/Etiqueta'
+import HistorialComercial from '../../components/HistorialComercial'
 import { formatMoneda, formatFecha } from '../../utils/formato'
 
 export default function OportunidadDetalle() {
@@ -147,8 +148,9 @@ export default function OportunidadDetalle() {
                 value={motivoPerdidaId}
                 onChange={(e) => setMotivoPerdidaId(e.target.value)}
                 className="rounded border border-linea bg-superficie px-3 py-1.5 text-sm"
+                required
               >
-                <option value="">Motivo de pérdida (opcional)</option>
+                <option value="">Elegí un motivo de pérdida...</option>
                 {motivos.map((m) => (
                   <option key={m.valor} value={m.valor}>
                     {m.etiqueta}
@@ -168,7 +170,7 @@ export default function OportunidadDetalle() {
 
           <button
             type="button"
-            disabled={!etapaId || cambiandoEtapa}
+            disabled={!etapaId || (esCambioAPerdida && !motivoPerdidaId) || cambiandoEtapa}
             onClick={confirmarCambioEtapa}
             className="rounded bg-acento px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
           >
@@ -176,6 +178,10 @@ export default function OportunidadDetalle() {
           </button>
         </div>
       </section>
+
+      <div className="mt-6">
+        <HistorialComercial oportunidadId={id} />
+      </div>
     </div>
   )
 }

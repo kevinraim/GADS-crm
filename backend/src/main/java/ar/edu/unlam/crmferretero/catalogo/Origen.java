@@ -10,6 +10,7 @@ public class Origen extends BaseDocument {
     private String nombre;
     private int orden;
     private boolean activo = true;
+    private String distribuidoraId;
 
     public Origen() {
     }
@@ -18,6 +19,11 @@ public class Origen extends BaseDocument {
         this.nombre = nombre;
         this.orden = orden;
         this.activo = activo;
+    }
+
+    public Origen(String nombre, int orden, boolean activo, String distribuidoraId) {
+        this(nombre, orden, activo);
+        this.distribuidoraId = distribuidoraId;
     }
 
     public String getNombre() {
@@ -42,5 +48,13 @@ public class Origen extends BaseDocument {
 
     public void setActivo(boolean activo) {
         this.activo = activo;
+    }
+
+    public String getDistribuidoraId() {
+        return distribuidoraId;
+    }
+
+    public void setDistribuidoraId(String distribuidoraId) {
+        this.distribuidoraId = distribuidoraId;
     }
 }

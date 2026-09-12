@@ -55,9 +55,12 @@ export function AuthProvider({ children }) {
 
   const opcionesEnum = useCallback((categoria) => enums[categoria] || [], [enums])
 
+  // true si el usuario logueado tiene alguno de los roles pasados.
+  const tieneRol = useCallback((...roles) => !!usuario && roles.includes(usuario.rol), [usuario])
+
   return (
     <AuthContext.Provider
-      value={{ usuario, cargando, estaAutenticado: !!usuario, login, logout, etiqueta, opcionesEnum, enums }}
+      value={{ usuario, cargando, estaAutenticado: !!usuario, login, logout, etiqueta, opcionesEnum, enums, tieneRol }}
     >
       {children}
     </AuthContext.Provider>

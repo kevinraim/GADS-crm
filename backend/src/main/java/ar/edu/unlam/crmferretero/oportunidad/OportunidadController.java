@@ -3,6 +3,7 @@ package ar.edu.unlam.crmferretero.oportunidad;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -34,9 +35,10 @@ public class OportunidadController {
                                                       @RequestParam(required = false) String responsableId,
                                                       @RequestParam(required = false) EstadoOportunidad estado,
                                                       @RequestParam(required = false) String empresaId,
+                                                      @RequestParam(required = false) String distribuidoraId,
                                                       @RequestParam(required = false) Integer pagina,
                                                       @RequestParam(required = false) Integer tamanio) {
-        return oportunidadService.listar(q, etapaId, responsableId, estado, empresaId, pagina, tamanio);
+        return oportunidadService.listar(q, etapaId, responsableId, estado, empresaId, distribuidoraId, pagina, tamanio);
     }
 
     @GetMapping("/{id}")
@@ -46,11 +48,13 @@ public class OportunidadController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN_COMERCIO','VENDEDOR','RESPONSABLE_COMERCIAL')")
     public OportunidadResponse crear(@Valid @RequestBody OportunidadRequest request) {
         return oportunidadService.crear(request);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN_COMERCIO','VENDEDOR','RESPONSABLE_COMERCIAL')")
     public OportunidadResponse actualizar(@PathVariable String id, @Valid @RequestBody OportunidadRequest request) {
         return oportunidadService.actualizar(id, request);
     }

@@ -27,8 +27,10 @@ import ar.edu.unlam.crmferretero.oportunidad.historial.HistorialEtapaResponse;
 import ar.edu.unlam.crmferretero.oportunidad.historial.HistorialEtapaService;
 import ar.edu.unlam.crmferretero.producto.Producto;
 import ar.edu.unlam.crmferretero.producto.ProductoRepository;
+import ar.edu.unlam.crmferretero.shared.AlcanceUtils;
 import ar.edu.unlam.crmferretero.shared.ConsultaUtils;
 import ar.edu.unlam.crmferretero.shared.PageResponse;
+import ar.edu.unlam.crmferretero.shared.TenantContext;
 import ar.edu.unlam.crmferretero.shared.exception.BusinessRuleException;
 import ar.edu.unlam.crmferretero.shared.exception.NotFoundException;
 import ar.edu.unlam.crmferretero.usuario.Usuario;
@@ -66,10 +68,12 @@ public class OportunidadService {
     // ---------------------------------------------------------------- listado
 
     public PageResponse<OportunidadResponse> listar(String texto, String etapaId, String responsableId,
-                                                      EstadoOportunidad estado, String empresaId,
+                                                      EstadoOportunidad estado, String empresaId, String distribuidoraId,
                                                       Integer pagina, Integer tamanio) {
         Pageable pageable = ConsultaUtils.paginar(pagina, tamanio);
         List<Criteria> condiciones = new ArrayList<>();
+        AlcanceUtils.porDistribuidora(condiciones, distribuidoraId);
+        AlcanceUtils.porVisibilidadFina(condiciones);
 
         String textoNormalizado = ConsultaUtils.normalizar(texto);
         if (textoNormalizado != null) {
@@ -157,6 +161,7 @@ public class OportunidadService {
 
         oportunidad.setEtapaActualId(etapa.getId());
         oportunidad.setEstado(estadoDesdeTipo(etapa.getTipo()));
+        oportunidad.setDistribuidoraId(AlcanceUtils.distribuidoraIdParaAlta());
         if (oportunidad.getEstado() != EstadoOportunidad.ABIERTA) {
             oportunidad.setFechaRealCierre(LocalDate.now());
         }
@@ -249,14 +254,16 @@ public class OportunidadService {
         oportunidad.setEstado(nuevoEstado);
 
         if (nuevoEstado == EstadoOportunidad.ABIERTA) {
-            // Reapertura de una oportunidad cerrada: en esta entrega se permite sin restricción de rol.
-            // Entrega 2: exigir rol ADMIN o RESPONSABLE_COMERCIAL para reabrir una oportunidad cerrada.
             oportunidad.setFechaRealCierre(null);
             oportunidad.setMotivoPerdidaId(null);
         } else {
             oportunidad.setFechaRealCierre(LocalDate.now());
-            if (nuevoEstado == EstadoOportunidad.PERDIDA && ConsultaUtils.normalizar(request.motivoPerdidaId()) != null) {
-                oportunidad.setMotivoPerdidaId(request.motivoPerdidaId());
+            if (nuevoEstado == EstadoOportunidad.PERDIDA) {
+                String motivoPerdidaId = ConsultaUtils.normalizar(request.motivoPerdidaId());
+                if (motivoPerdidaId == null) {
+                    throw new BusinessRuleException("Elegí un motivo de pérdida para cerrar la oportunidad como perdida");
+                }
+                oportunidad.setMotivoPerdidaId(motivoPerdidaId);
             }
         }
 
@@ -275,10 +282,16 @@ public class OportunidadService {
 
     // ---------------------------------------------------------------- embudo
 
-    public EmbudoResponse embudo(String responsableId, String zona) {
-        List<Etapa> etapas = catalogoService.listarEtapasActivas();
+    public EmbudoResponse embudo(String responsableId, String zona, String distribuidoraId) {
+        // El ADMIN sin ?distribuidoraId= ve el agregado de todas las distribuidoras: como cada una
+        // configura sus propias etapas, en ese caso se agrupa por TipoEtapa (fijo) en vez de por
+        // etapa puntual. Con una distribuidora resuelta (la propia, o la elegida por ADMIN) se usan
+        // sus etapas configuradas, como siempre.
+        boolean agregadoSinDistribuidora = TenantContext.esAdmin() && ConsultaUtils.normalizar(distribuidoraId) == null;
 
         List<Criteria> condiciones = new ArrayList<>();
+        AlcanceUtils.porDistribuidora(condiciones, distribuidoraId);
+        AlcanceUtils.porVisibilidadFina(condiciones);
         String responsableNormalizado = ConsultaUtils.normalizar(responsableId);
         if (responsableNormalizado != null) {
             condiciones.add(Criteria.where("responsableComercialId").is(responsableNormalizado));
@@ -311,14 +324,34 @@ public class OportunidadService {
         Map<String, String> nombresResponsables = usuarioRepository.findAllById(idsResponsables).stream()
                 .collect(Collectors.toMap(Usuario::getId, Usuario::getNombreCompleto));
 
-        Map<String, List<Oportunidad>> oportunidadesPorEtapa = oportunidades.stream()
-                .collect(Collectors.groupingBy(Oportunidad::getEtapaActualId));
+        record ColumnaDef(String id, String nombre, String descripcion, TipoEtapa tipo, String color, int orden) {
+        }
+
+        List<ColumnaDef> columnasDef;
+        java.util.function.Function<Oportunidad, String> claveColumna;
+        if (agregadoSinDistribuidora) {
+            columnasDef = List.of(
+                    new ColumnaDef("ABIERTA", "Abiertas (todas las distribuidoras)", null, TipoEtapa.ABIERTA, "#0E5C8A", 1),
+                    new ColumnaDef("GANADA", "Ganadas (todas las distribuidoras)", null, TipoEtapa.GANADA, "#15803D", 2),
+                    new ColumnaDef("PERDIDA", "Perdidas (todas las distribuidoras)", null, TipoEtapa.PERDIDA, "#C2410C", 3));
+            claveColumna = oportunidad -> oportunidad.getEstado().name();
+        } else {
+            List<Etapa> etapas = catalogoService.listarEtapasActivas();
+            columnasDef = etapas.stream()
+                    .map(etapa -> new ColumnaDef(etapa.getId(), etapa.getNombre(), etapa.getDescripcion(),
+                            etapa.getTipo(), etapa.getColor(), etapa.getOrden()))
+                    .toList();
+            claveColumna = Oportunidad::getEtapaActualId;
+        }
+
+        Map<String, List<Oportunidad>> oportunidadesPorColumna = oportunidades.stream()
+                .collect(Collectors.groupingBy(claveColumna));
 
         List<EmbudoColumnaResponse> columnas = new ArrayList<>();
-        for (Etapa etapa : etapas) {
-            List<Oportunidad> oportunidadesDeLaEtapa = oportunidadesPorEtapa.getOrDefault(etapa.getId(), List.of());
+        for (ColumnaDef columnaDef : columnasDef) {
+            List<Oportunidad> oportunidadesDeLaColumna = oportunidadesPorColumna.getOrDefault(columnaDef.id(), List.of());
 
-            List<EmbudoOportunidadResponse> tarjetas = oportunidadesDeLaEtapa.stream()
+            List<EmbudoOportunidadResponse> tarjetas = oportunidadesDeLaColumna.stream()
                     .map(oportunidad -> {
                         Empresa empresa = oportunidad.getEmpresaId() == null ? null : empresasPorId.get(oportunidad.getEmpresaId());
                         String clienteNombre = empresa != null ? empresa.nombreVisible()
@@ -335,20 +368,24 @@ public class OportunidadService {
                     })
                     .toList();
 
-            BigDecimal valorTotal = oportunidadesDeLaEtapa.stream()
+            BigDecimal valorTotal = oportunidadesDeLaColumna.stream()
                     .map(Oportunidad::getValorEstimado)
                     .filter(java.util.Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            columnas.add(new EmbudoColumnaResponse(etapa.getId(), etapa.getNombre(), etapa.getDescripcion(),
-                    etapa.getTipo(), etapa.getColor(), etapa.getOrden(), oportunidadesDeLaEtapa.size(), valorTotal, tarjetas));
+            columnas.add(new EmbudoColumnaResponse(columnaDef.id(), columnaDef.nombre(), columnaDef.descripcion(),
+                    columnaDef.tipo(), columnaDef.color(), columnaDef.orden(), oportunidadesDeLaColumna.size(), valorTotal, tarjetas));
         }
 
         return new EmbudoResponse(columnas);
     }
 
     Oportunidad buscarPorId(String id) {
-        return oportunidadRepository.findById(id)
+        Oportunidad oportunidad = oportunidadRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Oportunidad no encontrada (id " + id + ")"));
+        if (!TenantContext.esAdmin() && !java.util.Objects.equals(oportunidad.getDistribuidoraId(), TenantContext.distribuidoraId())) {
+            throw new NotFoundException("Oportunidad no encontrada (id " + id + ")");
+        }
+        return oportunidad;
     }
 }

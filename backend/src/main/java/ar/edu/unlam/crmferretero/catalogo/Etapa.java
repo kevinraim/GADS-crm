@@ -13,6 +13,7 @@ public class Etapa extends BaseDocument {
     private TipoEtapa tipo;
     private String color;
     private boolean activa = true;
+    private String distribuidoraId;
 
     public Etapa() {
     }
@@ -24,6 +25,12 @@ public class Etapa extends BaseDocument {
         this.tipo = tipo;
         this.color = color;
         this.activa = activa;
+    }
+
+    public Etapa(String nombre, String descripcion, int orden, TipoEtapa tipo, String color, boolean activa,
+                  String distribuidoraId) {
+        this(nombre, descripcion, orden, tipo, color, activa);
+        this.distribuidoraId = distribuidoraId;
     }
 
     public String getNombre() {
@@ -72,5 +79,13 @@ public class Etapa extends BaseDocument {
 
     public void setActiva(boolean activa) {
         this.activa = activa;
+    }
+
+    public String getDistribuidoraId() {
+        return distribuidoraId;
+    }
+
+    public void setDistribuidoraId(String distribuidoraId) {
+        this.distribuidoraId = distribuidoraId;
     }
 }

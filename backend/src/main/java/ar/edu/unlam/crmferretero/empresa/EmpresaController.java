@@ -3,6 +3,7 @@ package ar.edu.unlam.crmferretero.empresa;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,9 +37,10 @@ public class EmpresaController {
                                                  @RequestParam(required = false) TipoComercio tipoComercio,
                                                  @RequestParam(required = false) String zona,
                                                  @RequestParam(required = false) String responsableId,
+                                                 @RequestParam(required = false) String distribuidoraId,
                                                  @RequestParam(required = false) Integer pagina,
                                                  @RequestParam(required = false) Integer tamanio) {
-        return empresaService.listar(q, estado, tipoComercio, zona, responsableId, pagina, tamanio);
+        return empresaService.listar(q, estado, tipoComercio, zona, responsableId, distribuidoraId, pagina, tamanio);
     }
 
     @GetMapping("/opciones")
@@ -53,11 +55,13 @@ public class EmpresaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN_COMERCIO','VENDEDOR','RESPONSABLE_COMERCIAL')")
     public EmpresaResponse crear(@Valid @RequestBody EmpresaRequest request) {
         return empresaService.crear(request);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN_COMERCIO','VENDEDOR','RESPONSABLE_COMERCIAL')")
     public EmpresaResponse actualizar(@PathVariable String id, @Valid @RequestBody EmpresaRequest request) {
         return empresaService.actualizar(id, request);
     }

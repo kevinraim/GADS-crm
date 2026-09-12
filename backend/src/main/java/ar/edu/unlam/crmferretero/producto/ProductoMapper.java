@@ -15,7 +15,9 @@ public class ProductoMapper {
                 producto.getUnidadVenta(),
                 producto.getPresentacion(),
                 producto.getPrecioListaReferencia(),
-                producto.isActivo()
+                producto.isActivo(),
+                producto.getPreciosPorLista(),
+                producto.getEscalonesDescuento().stream().map(EscalonDescuentoResponse::de).toList()
         );
     }
 }

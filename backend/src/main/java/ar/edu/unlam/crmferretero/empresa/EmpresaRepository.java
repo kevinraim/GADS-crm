@@ -5,5 +5,5 @@ import java.util.Optional;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface EmpresaRepository extends MongoRepository<Empresa, String> {
-    Optional<Empresa> findByCuit(String cuit);
+    Optional<Empresa> findByCuitAndDistribuidoraId(String cuit, String distribuidoraId);
 }

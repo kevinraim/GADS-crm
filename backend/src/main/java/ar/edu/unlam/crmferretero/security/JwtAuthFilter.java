@@ -15,6 +15,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import ar.edu.unlam.crmferretero.shared.TenantContext;
+import ar.edu.unlam.crmferretero.usuario.Rol;
+
 /**
  * Lee el header Authorization: Bearer, valida el token y arma la autenticación en el contexto.
  * Si el token es inválido o venció, limpia el contexto y deja que el endpoint responda 401
@@ -53,12 +56,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
                     autenticacion.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(autenticacion);
+
+                    Rol rol = Rol.valueOf(jwtService.extraerRol(token));
+                    TenantContext.set(new TenantContext.Datos(
+                            jwtService.extraerUid(token), email, rol, jwtService.extraerDistribuidoraId(token)));
                 }
             }
         } catch (Exception ex) {
             SecurityContextHolder.clearContext();
         }
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            TenantContext.clear();
+        }
     }
 }

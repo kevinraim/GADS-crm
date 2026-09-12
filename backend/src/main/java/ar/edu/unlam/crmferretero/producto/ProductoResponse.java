@@ -1,6 +1,10 @@
 package ar.edu.unlam.crmferretero.producto;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+
+import ar.edu.unlam.crmferretero.empresa.ListaPrecios;
 
 public record ProductoResponse(
         String id,
@@ -11,5 +15,7 @@ public record ProductoResponse(
         UnidadVenta unidadVenta,
         String presentacion,
         BigDecimal precioListaReferencia,
-        boolean activo
+        boolean activo,
+        Map<ListaPrecios, BigDecimal> preciosPorLista,
+        List<EscalonDescuentoResponse> escalonesDescuento
 ) {}

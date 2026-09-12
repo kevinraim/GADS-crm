@@ -1,19 +1,24 @@
 package ar.edu.unlam.crmferretero.producto;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import ar.edu.unlam.crmferretero.empresa.ListaPrecios;
 import ar.edu.unlam.crmferretero.shared.BaseDocument;
 
-/** Sin stock: la gestión de inventario está fuera del alcance del producto. Solo lectura en esta entrega. */
+/** Sin stock: la gestión de inventario está fuera del alcance del producto. Catálogo propio de cada distribuidora. */
 @Document("productos")
+@CompoundIndexes(@CompoundIndex(name = "codigo_distribuidora", def = "{'codigo': 1, 'distribuidoraId': 1}", unique = true))
 public class Producto extends BaseDocument {
 
-    @Indexed(unique = true)
     private String codigo;
-
     private String nombre;
     private String marca;
     private RubroProducto rubro;
@@ -21,6 +26,14 @@ public class Producto extends BaseDocument {
     private String presentacion;
     private BigDecimal precioListaReferencia;
     private boolean activo = true;
+    private String distribuidoraId;
+
+    /** Precio especial por lista de precios de la empresa (Empresa.listaPrecios); si una lista no
+     * tiene entrada acá, se usa precioListaReferencia como base. */
+    private Map<ListaPrecios, BigDecimal> preciosPorLista = new LinkedHashMap<>();
+
+    /** Descuentos por cantidad, se aplica el de mayor cantidadMinima que la cantidad alcance. */
+    private List<EscalonDescuento> escalonesDescuento = new ArrayList<>();
 
     public Producto() {
     }
@@ -35,6 +48,12 @@ public class Producto extends BaseDocument {
         this.presentacion = presentacion;
         this.precioListaReferencia = precioListaReferencia;
         this.activo = activo;
+    }
+
+    public Producto(String codigo, String nombre, String marca, RubroProducto rubro, UnidadVenta unidadVenta,
+                     String presentacion, BigDecimal precioListaReferencia, boolean activo, String distribuidoraId) {
+        this(codigo, nombre, marca, rubro, unidadVenta, presentacion, precioListaReferencia, activo);
+        this.distribuidoraId = distribuidoraId;
     }
 
     public String getCodigo() {
@@ -103,5 +122,29 @@ public class Producto extends BaseDocument {
 
     public String nombreVisible() {
         return nombre + " (" + presentacion + ")";
+    }
+
+    public String getDistribuidoraId() {
+        return distribuidoraId;
+    }
+
+    public void setDistribuidoraId(String distribuidoraId) {
+        this.distribuidoraId = distribuidoraId;
+    }
+
+    public Map<ListaPrecios, BigDecimal> getPreciosPorLista() {
+        return preciosPorLista;
+    }
+
+    public void setPreciosPorLista(Map<ListaPrecios, BigDecimal> preciosPorLista) {
+        this.preciosPorLista = preciosPorLista != null ? preciosPorLista : new LinkedHashMap<>();
+    }
+
+    public List<EscalonDescuento> getEscalonesDescuento() {
+        return escalonesDescuento;
+    }
+
+    public void setEscalonesDescuento(List<EscalonDescuento> escalonesDescuento) {
+        this.escalonesDescuento = escalonesDescuento != null ? escalonesDescuento : new ArrayList<>();
     }
 }

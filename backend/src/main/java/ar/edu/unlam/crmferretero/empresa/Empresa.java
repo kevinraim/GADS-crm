@@ -2,21 +2,25 @@ package ar.edu.unlam.crmferretero.empresa;
 
 import java.math.BigDecimal;
 
-import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import ar.edu.unlam.crmferretero.shared.BaseDocument;
 import ar.edu.unlam.crmferretero.shared.CondicionPago;
 import ar.edu.unlam.crmferretero.shared.EstadoRegistro;
 
-/** Comercio cliente de la distribuidora: ferretería minorista, corralón, taller, constructora, etc. */
+/**
+ * Comercio cliente de la distribuidora: ferretería minorista, corralón, taller, constructora, etc.
+ * El CUIT es único por distribuidora, no global: dos distribuidoras distintas pueden tener cargado
+ * el mismo comercio cliente sin conflicto.
+ */
 @Document("empresas")
+@CompoundIndexes(@CompoundIndex(name = "cuit_distribuidora", def = "{'cuit': 1, 'distribuidoraId': 1}", unique = true, sparse = true))
 public class Empresa extends BaseDocument {
 
     private String razonSocial;
     private String nombreFantasia;
-
-    @Indexed(unique = true, sparse = true)
     private String cuit;
 
     private String email;
@@ -35,6 +39,7 @@ public class Empresa extends BaseDocument {
     private CondicionPago condicionPagoHabitual;
     private ListaPrecios listaPrecios;
     private BigDecimal limiteCreditoEstimado;
+    private String distribuidoraId;
 
     public Empresa() {
     }
@@ -186,5 +191,13 @@ public class Empresa extends BaseDocument {
 
     public void setLimiteCreditoEstimado(BigDecimal limiteCreditoEstimado) {
         this.limiteCreditoEstimado = limiteCreditoEstimado;
+    }
+
+    public String getDistribuidoraId() {
+        return distribuidoraId;
+    }
+
+    public void setDistribuidoraId(String distribuidoraId) {
+        this.distribuidoraId = distribuidoraId;
     }
 }

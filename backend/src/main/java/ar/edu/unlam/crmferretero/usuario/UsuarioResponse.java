@@ -7,7 +7,8 @@ public record UsuarioResponse(
         String nombreCompleto,
         String email,
         Rol rol,
-        boolean activo
+        boolean activo,
+        String distribuidoraId
 ) {
 
     public static UsuarioResponse de(Usuario usuario) {
@@ -18,7 +19,8 @@ public record UsuarioResponse(
                 usuario.getNombreCompleto(),
                 usuario.getEmail(),
                 usuario.getRol(),
-                usuario.isActivo()
+                usuario.isActivo(),
+                usuario.getDistribuidoraId()
         );
     }
 }

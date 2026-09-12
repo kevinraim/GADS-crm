@@ -1,12 +1,16 @@
 package ar.edu.unlam.crmferretero.usuario;
 
 /**
- * Rol del usuario. Se guarda y viaja en el token JWT desde esta entrega, pero todavía no
- * restringe nada: la activación de permisos efectivos (@PreAuthorize) queda para la entrega 2.
+ * Rol del usuario, viaja en el token JWT y activa permisos vía @PreAuthorize.
+ * ADMIN es el superadmin de la plataforma (no pertenece a ninguna distribuidora).
+ * ADMIN_COMERCIO administra su propia distribuidora por completo.
+ * VENDEDOR y RESPONSABLE_COMERCIAL tienen los mismos permisos; se mantienen separados solo por
+ * vocabulario/reporting dentro de la distribuidora.
  */
 public enum Rol {
 
     ADMIN("Administrador"),
+    ADMIN_COMERCIO("Administrador de la distribuidora"),
     VENDEDOR("Vendedor de zona"),
     RESPONSABLE_COMERCIAL("Responsable comercial");
 

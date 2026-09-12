@@ -29,6 +29,7 @@ public class Oportunidad extends BaseDocument {
     private String observaciones;
     private CondicionPago condicionPagoNegociada;
     private boolean requiereAltaCuentaCorriente;
+    private String distribuidoraId;
 
     public Oportunidad() {
     }
@@ -151,5 +152,13 @@ public class Oportunidad extends BaseDocument {
 
     public void setRequiereAltaCuentaCorriente(boolean requiereAltaCuentaCorriente) {
         this.requiereAltaCuentaCorriente = requiereAltaCuentaCorriente;
+    }
+
+    public String getDistribuidoraId() {
+        return distribuidoraId;
+    }
+
+    public void setDistribuidoraId(String distribuidoraId) {
+        this.distribuidoraId = distribuidoraId;
     }
 }

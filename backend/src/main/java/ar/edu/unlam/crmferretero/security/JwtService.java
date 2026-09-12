@@ -30,12 +30,17 @@ public class JwtService {
         this.vencimientoMinutos = vencimientoMinutos;
     }
 
-    public String generarToken(String email, String rol, String nombre, String uid) {
+    public String generarToken(String email, String rol, String nombre, String uid, String distribuidoraId) {
         Date ahora = new Date();
         Date vencimiento = new Date(ahora.getTime() + vencimientoMinutos * 60 * 1000);
+        Map<String, Object> claims = new java.util.HashMap<>();
+        claims.put("rol", rol);
+        claims.put("nombre", nombre);
+        claims.put("uid", uid);
+        claims.put("distribuidoraId", distribuidoraId);
         return Jwts.builder()
                 .subject(email)
-                .claims(Map.of("rol", rol, "nombre", nombre, "uid", uid))
+                .claims(claims)
                 .issuedAt(ahora)
                 .expiration(vencimiento)
                 .signWith(claveSecreta)
@@ -48,6 +53,18 @@ public class JwtService {
 
     public String extraerEmail(String token) {
         return extraerClaim(token, Claims::getSubject);
+    }
+
+    public String extraerRol(String token) {
+        return extraerClaim(token, claims -> claims.get("rol", String.class));
+    }
+
+    public String extraerUid(String token) {
+        return extraerClaim(token, claims -> claims.get("uid", String.class));
+    }
+
+    public String extraerDistribuidoraId(String token) {
+        return extraerClaim(token, claims -> claims.get("distribuidoraId", String.class));
     }
 
     public boolean esValido(String token, String email) {

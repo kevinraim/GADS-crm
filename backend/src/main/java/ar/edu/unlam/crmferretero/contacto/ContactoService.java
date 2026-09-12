@@ -16,9 +16,11 @@ import ar.edu.unlam.crmferretero.catalogo.Origen;
 import ar.edu.unlam.crmferretero.catalogo.OrigenRepository;
 import ar.edu.unlam.crmferretero.empresa.Empresa;
 import ar.edu.unlam.crmferretero.empresa.EmpresaRepository;
+import ar.edu.unlam.crmferretero.shared.AlcanceUtils;
 import ar.edu.unlam.crmferretero.shared.ConsultaUtils;
 import ar.edu.unlam.crmferretero.shared.EstadoRegistro;
 import ar.edu.unlam.crmferretero.shared.PageResponse;
+import ar.edu.unlam.crmferretero.shared.TenantContext;
 import ar.edu.unlam.crmferretero.shared.exception.NotFoundException;
 import ar.edu.unlam.crmferretero.usuario.Usuario;
 import ar.edu.unlam.crmferretero.usuario.UsuarioRepository;
@@ -45,9 +47,12 @@ public class ContactoService {
     }
 
     public PageResponse<ContactoResponse> listar(String texto, String empresaId, EstadoRegistro estado,
-                                                  String responsableId, Integer pagina, Integer tamanio) {
+                                                  String responsableId, String distribuidoraId,
+                                                  Integer pagina, Integer tamanio) {
         Pageable pageable = ConsultaUtils.paginar(pagina, tamanio);
         List<Criteria> condiciones = new ArrayList<>();
+        AlcanceUtils.porDistribuidora(condiciones, distribuidoraId);
+        AlcanceUtils.porVisibilidadFina(condiciones);
 
         String textoNormalizado = ConsultaUtils.normalizar(texto);
         if (textoNormalizado != null) {
@@ -112,6 +117,7 @@ public class ContactoService {
         Contacto contacto = new Contacto();
         aplicarRequest(contacto, request);
         contacto.setEstado(EstadoRegistro.POTENCIAL);
+        contacto.setDistribuidoraId(AlcanceUtils.distribuidoraIdParaAlta());
         Contacto guardado = contactoRepository.save(contacto);
         return obtenerPorId(guardado.getId());
     }
@@ -145,7 +151,11 @@ public class ContactoService {
     }
 
     Contacto buscarPorId(String id) {
-        return contactoRepository.findById(id)
+        Contacto contacto = contactoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Contacto no encontrado (id " + id + ")"));
+        if (!TenantContext.esAdmin() && !java.util.Objects.equals(contacto.getDistribuidoraId(), TenantContext.distribuidoraId())) {
+            throw new NotFoundException("Contacto no encontrado (id " + id + ")");
+        }
+        return contacto;
     }
 }

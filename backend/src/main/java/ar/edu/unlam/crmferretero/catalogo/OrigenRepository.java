@@ -6,4 +6,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface OrigenRepository extends MongoRepository<Origen, String> {
     List<Origen> findByActivoTrueOrderByOrdenAsc();
+    List<Origen> findByDistribuidoraIdAndActivoTrueOrderByOrdenAsc(String distribuidoraId);
+    List<Origen> findByDistribuidoraIdOrderByOrdenAsc(String distribuidoraId);
 }

@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/AuthContext'
 import Cargando from '../../components/Cargando'
 import MensajeError from '../../components/MensajeError'
 import Etiqueta, { tonoDeEstadoRegistro } from '../../components/Etiqueta'
+import HistorialComercial from '../../components/HistorialComercial'
 
 export default function ContactoDetalle() {
   const { id } = useParams()
@@ -87,6 +88,10 @@ export default function ContactoDetalle() {
           <p>{contacto.observaciones}</p>
         </div>
       )}
+
+      <div className="mt-6">
+        <HistorialComercial contactoId={id} />
+      </div>
     </div>
   )
 }

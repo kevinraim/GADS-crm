@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import ar.edu.unlam.crmferretero.catalogo.TipoEtapa;
 import ar.edu.unlam.crmferretero.empresa.CondicionIva;
 import ar.edu.unlam.crmferretero.empresa.ListaPrecios;
 import ar.edu.unlam.crmferretero.empresa.TipoComercio;
@@ -34,6 +35,7 @@ public class EnumsController {
         resultado.put("rubroProducto", opciones(RubroProducto.values(), RubroProducto::name, RubroProducto::getEtiqueta));
         resultado.put("unidadVenta", opciones(UnidadVenta.values(), UnidadVenta::name, UnidadVenta::getEtiqueta));
         resultado.put("rol", opciones(Rol.values(), Rol::name, Rol::getEtiqueta));
+        resultado.put("tipoEtapa", opciones(TipoEtapa.values(), TipoEtapa::name, TipoEtapa::getEtiqueta));
         return resultado;
     }
 

@@ -21,6 +21,7 @@ public class Contacto extends BaseDocument {
     private EstadoRegistro estado = EstadoRegistro.POTENCIAL;
     private String origenId;
     private String observaciones;
+    private String distribuidoraId;
 
     public Contacto() {
     }
@@ -123,5 +124,13 @@ public class Contacto extends BaseDocument {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public String getDistribuidoraId() {
+        return distribuidoraId;
+    }
+
+    public void setDistribuidoraId(String distribuidoraId) {
+        this.distribuidoraId = distribuidoraId;
     }
 }

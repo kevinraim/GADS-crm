@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { listarProductos } from '../../api/productos'
+import { Link } from 'react-router-dom'
+import { listarProductos, cambiarEstadoProducto } from '../../api/productos'
 import { useAuth } from '../../auth/AuthContext'
 import Cargando from '../../components/Cargando'
 import MensajeError from '../../components/MensajeError'
 import Vacio from '../../components/Vacio'
 import Paginacion from '../../components/Paginacion'
+import Etiqueta from '../../components/Etiqueta'
 import { formatMoneda } from '../../utils/formato'
 
 export default function ProductosListado() {
-  const { etiqueta, opcionesEnum } = useAuth()
+  const { etiqueta, opcionesEnum, tieneRol } = useAuth()
+  const puedeGestionar = tieneRol('ADMIN_COMERCIO')
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
@@ -25,6 +28,15 @@ export default function ProductosListado() {
       .finally(() => setCargando(false))
   }, [q, rubro, pagina])
 
+  async function alternarEstado(producto) {
+    try {
+      await cambiarEstadoProducto(producto.id, !producto.activo)
+      cargar()
+    } catch (err) {
+      setError(err)
+    }
+  }
+
   useEffect(() => {
     cargar()
   }, [cargar])
@@ -38,7 +50,14 @@ export default function ProductosListado() {
 
   return (
     <div>
-      <h1 className="mb-4 text-lg font-semibold">Productos</h1>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Productos</h1>
+        {puedeGestionar && (
+          <Link to="/productos/nuevo" className="rounded bg-acento px-4 py-2 text-sm font-medium text-white">
+            Nuevo producto
+          </Link>
+        )}
+      </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
         <input
@@ -75,19 +94,41 @@ export default function ProductosListado() {
                 <th className="px-4 py-2.5 font-medium">Rubro</th>
                 <th className="px-4 py-2.5 font-medium">Presentación</th>
                 <th className="px-4 py-2.5 text-right font-medium">Precio de referencia</th>
+                {puedeGestionar && <th className="px-4 py-2.5 font-medium">Estado</th>}
+                {puedeGestionar && <th className="px-4 py-2.5 font-medium">Acciones</th>}
               </tr>
             </thead>
             <tbody>
               {datos.contenido.map((p) => (
                 <tr key={p.id} className="border-b border-linea last:border-0 hover:bg-fondo/40">
                   <td className="px-4 py-2.5 text-texto/60">{p.codigo}</td>
-                  <td className="px-4 py-2.5 font-medium">{p.nombre}</td>
+                  <td className="px-4 py-2.5 font-medium">
+                    {puedeGestionar ? (
+                      <Link to={`/productos/${p.id}/editar`} className="text-acento hover:underline">
+                        {p.nombre}
+                      </Link>
+                    ) : (
+                      p.nombre
+                    )}
+                  </td>
                   <td className="px-4 py-2.5">{p.marca || '-'}</td>
                   <td className="px-4 py-2.5">{etiqueta('rubroProducto', p.rubro)}</td>
                   <td className="px-4 py-2.5">
                     {p.presentacion} ({etiqueta('unidadVenta', p.unidadVenta)})
                   </td>
                   <td className="numero px-4 py-2.5 text-right">{formatMoneda(p.precioListaReferencia)}</td>
+                  {puedeGestionar && (
+                    <td className="px-4 py-2.5">
+                      <Etiqueta texto={p.activo ? 'Activo' : 'Inactivo'} tono={p.activo ? 'cliente' : 'inactivo'} />
+                    </td>
+                  )}
+                  {puedeGestionar && (
+                    <td className="px-4 py-2.5">
+                      <button type="button" onClick={() => alternarEstado(p)} className="text-sm text-acento hover:underline">
+                        {p.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

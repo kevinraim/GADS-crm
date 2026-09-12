@@ -30,7 +30,7 @@ public class AuthService {
 
         Usuario usuario = usuarioService.obtenerPorEmail(request.email());
         String token = jwtService.generarToken(usuario.getEmail(), usuario.getRol().name(),
-                usuario.getNombreCompleto(), usuario.getId());
+                usuario.getNombreCompleto(), usuario.getId(), usuario.getDistribuidoraId());
 
         return new LoginResponse(token, jwtService.getVencimientoSegundos(), UsuarioResponse.de(usuario));
     }

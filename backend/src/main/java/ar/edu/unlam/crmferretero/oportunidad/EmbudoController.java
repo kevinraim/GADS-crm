@@ -15,7 +15,8 @@ public class EmbudoController {
 
     @GetMapping("/api/embudo")
     public EmbudoResponse embudo(@RequestParam(required = false) String responsableId,
-                                  @RequestParam(required = false) String zona) {
-        return oportunidadService.embudo(responsableId, zona);
+                                  @RequestParam(required = false) String zona,
+                                  @RequestParam(required = false) String distribuidoraId) {
+        return oportunidadService.embudo(responsableId, zona, distribuidoraId);
     }
 }

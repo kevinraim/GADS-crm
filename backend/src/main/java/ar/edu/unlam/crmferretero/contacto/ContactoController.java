@@ -1,6 +1,7 @@
 package ar.edu.unlam.crmferretero.contacto;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -32,9 +33,10 @@ public class ContactoController {
                                                   @RequestParam(required = false) String empresaId,
                                                   @RequestParam(required = false) EstadoRegistro estado,
                                                   @RequestParam(required = false) String responsableId,
+                                                  @RequestParam(required = false) String distribuidoraId,
                                                   @RequestParam(required = false) Integer pagina,
                                                   @RequestParam(required = false) Integer tamanio) {
-        return contactoService.listar(q, empresaId, estado, responsableId, pagina, tamanio);
+        return contactoService.listar(q, empresaId, estado, responsableId, distribuidoraId, pagina, tamanio);
     }
 
     @GetMapping("/{id}")
@@ -44,11 +46,13 @@ public class ContactoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN_COMERCIO','VENDEDOR','RESPONSABLE_COMERCIAL')")
     public ContactoResponse crear(@Valid @RequestBody ContactoRequest request) {
         return contactoService.crear(request);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN_COMERCIO','VENDEDOR','RESPONSABLE_COMERCIAL')")
     public ContactoResponse actualizar(@PathVariable String id, @Valid @RequestBody ContactoRequest request) {
         return contactoService.actualizar(id, request);
     }

@@ -13,10 +13,12 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import ar.edu.unlam.crmferretero.shared.AlcanceUtils;
 import ar.edu.unlam.crmferretero.shared.ConsultaUtils;
 import ar.edu.unlam.crmferretero.shared.EstadoRegistro;
 import ar.edu.unlam.crmferretero.shared.OpcionResponse;
 import ar.edu.unlam.crmferretero.shared.PageResponse;
+import ar.edu.unlam.crmferretero.shared.TenantContext;
 import ar.edu.unlam.crmferretero.shared.exception.DuplicateResourceException;
 import ar.edu.unlam.crmferretero.shared.exception.NotFoundException;
 import ar.edu.unlam.crmferretero.usuario.Usuario;
@@ -43,9 +45,10 @@ public class EmpresaService {
     }
 
     public PageResponse<EmpresaResponse> listar(String texto, EstadoRegistro estado, TipoComercio tipoComercio,
-                                                 String zona, String responsableId, Integer pagina, Integer tamanio) {
+                                                 String zona, String responsableId, String distribuidoraId,
+                                                 Integer pagina, Integer tamanio) {
         Pageable pageable = ConsultaUtils.paginar(pagina, tamanio);
-        Criteria criteria = construirCriteria(texto, estado, tipoComercio, zona, responsableId);
+        Criteria criteria = construirCriteria(texto, estado, tipoComercio, zona, responsableId, distribuidoraId);
 
         long total = mongoTemplate.count(new Query(criteria), Empresa.class);
         Query query = new Query(criteria).with(pageable);
@@ -56,8 +59,10 @@ public class EmpresaService {
     }
 
     private Criteria construirCriteria(String texto, EstadoRegistro estado, TipoComercio tipoComercio,
-                                        String zona, String responsableId) {
+                                        String zona, String responsableId, String distribuidoraId) {
         List<Criteria> condiciones = new ArrayList<>();
+        AlcanceUtils.porDistribuidora(condiciones, distribuidoraId);
+        AlcanceUtils.porVisibilidadFina(condiciones);
 
         String textoNormalizado = ConsultaUtils.normalizar(texto);
         if (textoNormalizado != null) {
@@ -111,7 +116,12 @@ public class EmpresaService {
     }
 
     public List<OpcionResponse> opciones() {
-        return empresaRepository.findAll().stream()
+        List<Criteria> condiciones = new ArrayList<>();
+        AlcanceUtils.porDistribuidora(condiciones, null);
+        AlcanceUtils.porVisibilidadFina(condiciones);
+        Criteria criteria = condiciones.isEmpty() ? new Criteria() : new Criteria().andOperator(condiciones.toArray(new Criteria[0]));
+
+        return mongoTemplate.find(new Query(criteria), Empresa.class).stream()
                 .filter(empresa -> empresa.getEstado() != EstadoRegistro.NO_CONTACTAR)
                 .map(empresa -> new OpcionResponse(empresa.getId(), empresa.nombreVisible()))
                 .toList();
@@ -123,6 +133,7 @@ public class EmpresaService {
         Empresa empresa = new Empresa();
         aplicarRequest(empresa, request);
         empresa.setEstado(EstadoRegistro.POTENCIAL);
+        empresa.setDistribuidoraId(AlcanceUtils.distribuidoraIdParaAlta());
 
         Empresa guardada = empresaRepository.save(empresa);
         return obtenerPorId(guardada.getId());
@@ -170,7 +181,7 @@ public class EmpresaService {
         if (cuitNormalizado == null) {
             return;
         }
-        empresaRepository.findByCuit(cuitNormalizado).ifPresent(existente -> {
+        empresaRepository.findByCuitAndDistribuidoraId(cuitNormalizado, AlcanceUtils.distribuidoraIdParaAlta()).ifPresent(existente -> {
             if (idPropio == null || !existente.getId().equals(idPropio)) {
                 throw new DuplicateResourceException(
                         "Ya existe un comercio con el CUIT " + cuitNormalizado + " (" + existente.nombreVisible() + ")");
@@ -179,7 +190,11 @@ public class EmpresaService {
     }
 
     Empresa buscarPorId(String id) {
-        return empresaRepository.findById(id)
+        Empresa empresa = empresaRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Comercio no encontrado (id " + id + ")"));
+        if (!TenantContext.esAdmin() && !java.util.Objects.equals(empresa.getDistribuidoraId(), TenantContext.distribuidoraId())) {
+            throw new NotFoundException("Comercio no encontrado (id " + id + ")");
+        }
+        return empresa;
     }
 }
