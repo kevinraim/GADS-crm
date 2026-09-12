@@ -2,40 +2,62 @@
 
 CRM especializado en distribuidoras mayoristas de artículos de ferretería y materiales de
 construcción. El usuario del sistema es la distribuidora; los "clientes" que carga son ferreterías
-minoristas, corralones, talleres y constructoras (modelo B2B).
+minoristas, corralones, talleres y constructoras.
 
-> **Estado de esta entrega:** por ahora está implementado **solo el backend**. El frontend
-> (React) y la dockerización de todo el proyecto quedan para el siguiente paso, según lo acordado.
-> Este README documenta cómo levantar y probar la API tal como está hoy.
+> **Estado de esta entrega:** proyecto completo — backend, frontend y dockerización de las tres
+> piezas (Mongo, backend, frontend).
 
 ## Stack
 
 - **Backend**: Java 21, Spring Boot 3.3.4, Maven.
 - **Base de datos**: MongoDB 7.
 - **Seguridad**: Spring Security + JWT (jjwt 0.12.6), stateless.
-- **Sin Lombok**: por decisión explícita, ningún módulo del proyecto usa Lombok. Los documentos de
+- **Frontend**: React 18 + Vite, React Router 6, Axios, Tailwind CSS. Sin librería de íconos (SVGs
+  propios) y sin drag & drop de terceros (API nativa de HTML5 en el tablero del embudo).
+- **Infraestructura**: Docker + Docker Compose. Todo levanta con `docker compose up --build`.
+- **Sin Lombok**: por decisión explícita, ningún módulo del backend usa Lombok. Los documentos de
   Mongo son clases Java normales (constructor, getters y setters escritos a mano) y los DTOs son
   `record`.
-- **Sin tests**: no se agregó JUnit ni ningún framework de testing, según lo pedido.
+- **Sin tests**: no se agregó JUnit, Vitest ni ningún framework de testing, según lo pedido.
 
-## Requisitos previos
+## Cómo levantarlo con Docker (recomendado)
 
-- JDK 21
-- Maven 3.9+ (o usar `./mvnw` si lo agregás)
-- Un MongoDB 7 corriendo en `localhost:27017` (podés levantarlo con
-  `docker run -d --name mongo-crm -p 27017:27017 mongo:7` si tenés Docker, o instalado local)
+Requisito: Docker y Docker Compose.
 
-## Cómo levantarlo (desarrollo, sin Docker)
+```bash
+docker compose up --build
+```
+
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8080
+
+El `SeedRunner` carga automáticamente catálogos, usuarios y datos de demostración la primera vez
+(es idempotente). Los datos de Mongo persisten en el volumen `mongo_data` entre reinicios.
+
+## Cómo correrlo sin Docker (desarrollo)
+
+Requisitos: JDK 21, Maven 3.9+, Node.js 18+, y un MongoDB 7 corriendo en `localhost:27017`
+(por ejemplo `docker run -d --name mongo-crm -p 27017:27017 mongo:7`).
+
+**Backend:**
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-Por defecto se conecta a `mongodb://localhost:27017/crm_ferretero` y expone la API en
-`http://localhost:8080`. Al arrancar por primera vez, el `SeedRunner` carga automáticamente
-catálogos, usuarios y datos de demostración (ver más abajo). Es idempotente: si volvés a arrancar
-con la base ya cargada, no duplica nada.
+Se conecta por defecto a `mongodb://localhost:27017/crm_ferretero` y expone la API en
+`http://localhost:8080`.
+
+**Frontend** (en otra terminal):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Se sirve en `http://localhost:5173`, con Vite proxeando `/api` a `http://localhost:8080`.
 
 ### Variables de entorno (opcionales)
 
@@ -49,6 +71,9 @@ Si no las definís, se usan los valores por defecto de `application.yml`:
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Orígenes permitidos |
 | `APP_SEED_ENABLED` | `true` | Poné `false` para arrancar con la base vacía sin que falle |
 
+En `docker-compose.yml` además se pueden sobreescribir `MONGO_USER` y `MONGO_PASSWORD` (usuario y
+contraseña root de Mongo, `admin`/`admin123` por defecto).
+
 ## Usuarios de prueba
 
 Cargados por el seed, contraseñas con BCrypt:
@@ -60,9 +85,14 @@ Cargados por el seed, contraseñas con BCrypt:
 | Paula Ortiz | `paula.ortiz@crmferretero.com` | `Vendedor123!` | VENDEDOR |
 | Marta Coria | `marta.coria@crmferretero.com` | `Responsable123!` | RESPONSABLE_COMERCIAL |
 
-## Guion de demostración (por API, sin frontend todavía)
+## Guion de demostración
 
-Los seis pasos que pide el enunciado, probados directamente contra la API:
+Los seis pasos que pide el enunciado se pueden hacer directamente desde la interfaz
+(`http://localhost:3000`, o `:5173` en desarrollo): iniciar sesión, cargar un comercio y un
+contacto desde "Comercios"/"Contactos", crear una oportunidad, verla en "Embudo", arrastrarla a
+otra columna (o cambiarla de etapa desde su detalle) y recargar para comprobar que persiste.
+
+Alternativamente, el mismo guion probado directamente contra la API:
 
 ```bash
 # 1. Iniciar sesión
@@ -145,7 +175,6 @@ de empresas y contactos son lógicas, vía `PATCH /estado`.
 
 ## Qué queda fuera de esta entrega
 
-- Frontend (React) y dockerización de todo el proyecto: es el siguiente paso.
 - ABM de usuarios por pantalla.
 - Permisos efectivos por rol (el rol viaja en el token, pero no restringe nada todavía;
   `@EnableMethodSecurity` está activo pero sin ningún `@PreAuthorize`).
@@ -189,3 +218,5 @@ de empresas y contactos son lógicas, vía `PATCH /estado`.
 - Además del mapeo de excepciones pedido en la especificación, se agregó un manejador para
   `AuthenticationException` (credenciales inválidas en el login), que responde 401 en lugar de un
   500 genérico.
+- El frontend resuelve todas las etiquetas de enums desde `/api/enums` vía `AuthContext.etiqueta()`;
+  no hay ningún `switch` de traducción en el código de React.
