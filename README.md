@@ -2,7 +2,7 @@
 
 CRM especializado en distribuidoras mayoristas de artículos de ferretería y materiales de
 construcción. El usuario del sistema es la distribuidora; los "clientes" que carga son ferreterías
-minoristas, corralones, talleres y constructoras (modelo B2B2C).
+minoristas, corralones, talleres y constructoras (modelo B2B).
 
 > **Estado de esta entrega:** por ahora está implementado **solo el backend**. El frontend
 > (React) y la dockerización de todo el proyecto quedan para el siguiente paso, según lo acordado.
