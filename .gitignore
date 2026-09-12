@@ -1,0 +1,23 @@
+# Java / Maven
+target/
+*.jar
+*.class
+
+# Node (se usa cuando se agregue el frontend)
+node_modules/
+dist/
+.vite/
+
+# Entorno
+.env
+*.local
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+backend/.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
