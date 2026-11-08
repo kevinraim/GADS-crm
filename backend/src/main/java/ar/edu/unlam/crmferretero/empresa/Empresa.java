@@ -16,7 +16,7 @@ import ar.edu.unlam.crmferretero.shared.EstadoRegistro;
  * el mismo comercio cliente sin conflicto.
  */
 @Document("empresas")
-@CompoundIndexes(@CompoundIndex(name = "cuit_distribuidora", def = "{'cuit': 1, 'distribuidoraId': 1}", unique = true, sparse = true))
+@CompoundIndexes(@CompoundIndex(name = "cuit_distribuidora", def = "{'cuit': 1, 'distribuidoraId': 1}", unique = true, partialFilter = "{ 'cuit': { '$type': 'string' } }"))
 public class Empresa extends BaseDocument {
 
     private String razonSocial;
